@@ -62,32 +62,3 @@ class VariationalAutoEncoder(nn.Module):
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
-
-
-class Classifier(nn.Module):
-    def __init__(self, lr):
-        super().__init__()
-    
-        self.main = nn.Sequential(
-            nn.Linear(n_latent, n_h),
-            nn.Tanh(),
-            nn.Linear(n_h, n_h),
-            nn.Tanh(),
-            nn.Linear(n_h, 1),
-            nn.Sigmoid()
-        )
-
-        self.optimizer = optim.Adam(self.parameters(), lr=lr)
-    
-    def forward(self, x):
-        return self.main(x)
-    
-    def maximize(self, loss):
-        self.optimizer.zero_grad()
-        (-loss).backward()
-        self.optimizer.step()
-    
-    def minimize(self, loss):
-        self.optimizer.zero_grad()
-        loss.backward()
-        self.optimizer.step()

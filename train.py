@@ -2,7 +2,7 @@ import torch
 import numpy as np
 
 from data import sample_data
-from model import VariationalAutoEncoder, Classifier
+from model import VariationalAutoEncoder
 from visualize import scatter, line, heatmap
 
 
@@ -86,13 +86,11 @@ auto_encoder = train(VariationalAutoEncoder, 'auto_encoder', 2000, auto_encoder_
 # testing
 map(lambda x: torch.norm(auto_encoder(x) - x), 'AE Error')
 
-# determine AE error on generated data
+# determine AE error on generated data -> use to determine error threshold
 with torch.no_grad():
     generated_data = auto_encoder.generate(1000)
     errors = torch.norm(auto_encoder(generated_data) - generated_data, dim=1)
-
     threshold = np.percentile(errors, 99.9)
-    print(threshold)
 
 # plot AE-error method's decision boundary
 def border(threshold, x):
@@ -101,12 +99,10 @@ def border(threshold, x):
 map(lambda x: border(threshold, x), 'AE classification')
 
 
-
 #! when making decision, maybe perturb point a bit to see what surrounding points are like
 def border(threshold, x):
     x_perturb = [x + torch.randn_like(x) for _ in range(10)]
     all_x = [x] + x_perturb
     avg_ae_error = sum([torch.norm(auto_encoder(x) - x) for x in all_x]) / len(all_x)
-    # ae_error = torch.norm(auto_encoder(x) - x)
     return 1 if avg_ae_error < threshold else 0
 map(lambda x: border(threshold, x), 'Soft AE classification')
