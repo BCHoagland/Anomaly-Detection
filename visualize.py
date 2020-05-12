@@ -4,10 +4,11 @@ from visdom import Visdom
 viz = Visdom()
 
 
-def scatter(points, win='data', color=[0,0,0]):
+def scatter(points, win='data', name='data', color=[0,0,0]):
     viz.scatter(
         X=points,
         win=win,
+        name=name,
         opts=dict(
             title=win,
             markersize=4,
@@ -22,12 +23,13 @@ def scatter(points, win='data', color=[0,0,0]):
 
 
 line_data = {}
-def line(point, win):
-    if win not in line_data: line_data[win] = []
-    line_data[win].append(point)
+def line(x, y, win):
+    if win not in line_data: line_data[win] = {'x': [], 'y': []}
+    line_data[win]['x'].append(x)
+    line_data[win]['y'].append(y)
     viz.line(
-        X=np.arange(len(line_data[win])),
-        Y=np.array(line_data[win]),
+        X=np.array(line_data[win]['x']),
+        Y=np.array(line_data[win]['y']),
         win=win,
         opts=dict(
             title=win
