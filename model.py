@@ -5,8 +5,8 @@ from torch import randn, randn_like
 # TODO: remove these
 ####################
 n_in = 2
-n_h = 64
-n_latent = 2
+n_h = 128
+n_latent = 4
 ####################
 
 class VariationalAutoEncoder(nn.Module):
@@ -62,3 +62,80 @@ class VariationalAutoEncoder(nn.Module):
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
+
+
+class WGan(nn.Module):
+    def __init__(self, lr):
+        super().__init__()
+
+        self.generator = nn.Sequential(
+            nn.Linear(n_latent, n_h),
+            nn.Tanh(),
+            nn.Linear(n_h, n_h),
+            nn.Tanh(),
+            nn.Linear(n_h, n_in)
+        )
+
+        self.classify = nn.Sequential(
+            nn.Linear(n_in, n_h),
+            nn.Tanh(),
+            nn.Linear(n_h, n_h),
+            nn.Tanh(),
+            nn.Linear(n_h, 1)
+        )
+
+        self.generator_optimizer = optim.Adam(self.generator.parameters(), lr=lr)
+        self.classifier_optimizer = optim.Adam(self.classify.parameters(), lr=lr)
+    
+    def generate(self, batch_size):
+        noise = randn(batch_size, n_latent)
+        return self.generator(noise)
+    
+    def minimize(self, opt, loss):
+        opt.zero_grad()
+        loss.backward()
+        opt.step()
+    
+    def maximize(self, opt, loss):
+        opt.zero_grad()
+        (-loss).backward()
+        opt.step()
+
+
+class Gan(nn.Module):
+    def __init__(self, lr):
+        super().__init__()
+
+        self.generator = nn.Sequential(
+            nn.Linear(n_latent, n_h),
+            nn.Tanh(),
+            nn.Linear(n_h, n_h),
+            nn.Tanh(),
+            nn.Linear(n_h, n_in)
+        )
+
+        self.classify = nn.Sequential(
+            nn.Linear(n_in, n_h),
+            nn.Tanh(),
+            nn.Linear(n_h, n_h),
+            nn.Tanh(),
+            nn.Linear(n_h, 1),
+            nn.Sigmoid()
+        )
+
+        self.generator_optimizer = optim.Adam(self.generator.parameters(), lr=lr)
+        self.classifier_optimizer = optim.Adam(self.classify.parameters(), lr=lr)
+    
+    def generate(self, batch_size):
+        noise = randn(batch_size, n_latent)
+        return self.generator(noise)
+    
+    def minimize(self, opt, loss):
+        opt.zero_grad()
+        loss.backward()
+        opt.step()
+    
+    def maximize(self, opt, loss):
+        opt.zero_grad()
+        (-loss).backward()
+        opt.step()
