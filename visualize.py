@@ -2,6 +2,8 @@ import torch
 import numpy as np
 from visdom import Visdom
 
+device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+
 viz = Visdom()
 
 
@@ -53,9 +55,6 @@ def heatmap(points, win, x_labels, y_labels):
 def map(fn, name):
     x_range = torch.arange(-30, 30)
     y_range = torch.arange(-30, 30)
-    arr = torch.zeros((len(x_range), len(y_range)))
-    for i in range(len(x_range)):
-        for j in range(len(y_range)):
-            x, y = x_range[i], y_range[j]
-            arr[i][j] = fn(torch.FloatTensor([x, y]))
-    heatmap(arr, name, x_range.tolist(), y_range.tolist())
+    xv, yv = torch.meshgrid(x_range, y_range)
+    points = torch.cat((xv.unsqueeze(-1), yv.unsqueeze(-1)), dim=-1).float().to(device)
+    heatmap(fn(points).squeeze().cpu(), name, x_range.tolist(), y_range.tolist())

@@ -1,6 +1,8 @@
+import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch import randn, randn_like
+
+device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 
 # TODO: remove these
 ####################
@@ -32,7 +34,7 @@ class AutoEncoder(nn.Module):
         self.optimizer = optim.Adam(self.parameters(), lr=lr)
     
     def generate(self, batch_size):
-        noise = randn(batch_size, n_latent)
+        noise = torch.randn(batch_size, n_latent).to(device)
         return self.decode(noise)
     
     def forward(self, x):
@@ -77,10 +79,10 @@ class VariationalAutoEncoder(nn.Module):
         x = self.main(x)
         mean = self.mean(x)
         std = self.log_std(x).exp()
-        return mean + std * randn_like(std)
+        return mean + std * torch.randn_like(std).to(device)
     
     def generate(self, batch_size):
-        noise = randn(batch_size, n_latent)
+        noise = torch.randn(batch_size, n_latent).to(device)
         return self.decode(noise)
     
     def forward(self, x):
@@ -90,7 +92,7 @@ class VariationalAutoEncoder(nn.Module):
         x = self.main(x)
         mean = self.mean(x)
         std = self.log_std(x).exp()
-        latent = mean + std * randn_like(std)
+        latent = mean + std * torch.randn_like(std).to(device)
         return self.decode(latent), mean, std
     
     def minimize(self, loss):
@@ -123,7 +125,7 @@ class WGan(nn.Module):
         self.classifier_optimizer = optim.Adam(self.classify.parameters(), lr=lr)
     
     def generate(self, batch_size):
-        noise = randn(batch_size, n_latent)
+        noise = torch.randn(batch_size, n_latent).to(device)
         return self.generator(noise)
     
     def minimize(self, opt, loss):
@@ -162,7 +164,7 @@ class Gan(nn.Module):
         self.classifier_optimizer = optim.Adam(self.classify.parameters(), lr=lr)
     
     def generate(self, batch_size):
-        noise = randn(batch_size, n_latent)
+        noise = torch.randn(batch_size, n_latent).to(device)
         return self.generator(noise)
     
     def minimize(self, opt, loss):

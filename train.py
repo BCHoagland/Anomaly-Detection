@@ -6,14 +6,17 @@ from visualize import scatter, line, heatmap
 import algos.ae, algos.vae, algos.gan, algos.wgan
 
 
+device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+
+
 # hyperparameters
-batch_size = 256
-lr = 1e-4
+batch_size = 512
+lr = 3e-4
 vis_iter = 50
 
 
 def train(network_class, network_name, epochs, algo, use_saved_model=True):
-    net = network_class(lr)
+    net = network_class(lr).to(device)
 
     save_path = f'model_params/{network_name}'
 
@@ -30,7 +33,7 @@ def train(network_class, network_name, epochs, algo, use_saved_model=True):
     # training loop
     for epoch in range(epochs):
         # Take an optimization step and visualize if necessary
-        data = sample_data(batch_size)
+        data = sample_data(batch_size).to(device)
         stats = algo.step(net, data)
         if epoch % vis_iter == vis_iter - 1:
             if isinstance(stats, tuple):
@@ -54,7 +57,7 @@ def train(network_class, network_name, epochs, algo, use_saved_model=True):
 scatter(sample_data(500))
 
 # train AE and GAN
-ae = train(AutoEncoder, 'ae', 5000, algos.ae.AeAlgo, use_saved_model=False)
-vae = train(VariationalAutoEncoder, 'vae', 5000, algos.vae.VaeAlgo, use_saved_model=False)
-gan = train(Gan, 'gan', 5000, algos.gan.GanAlgo, use_saved_model=False)
-wgan = train(WGan, 'wgan', 5000, algos.wgan.WganAlgo, use_saved_model=False)
+ae = train(AutoEncoder, 'ae', 20000, algos.ae.AeAlgo, use_saved_model=True)
+vae = train(VariationalAutoEncoder, 'vae', 20000, algos.vae.VaeAlgo, use_saved_model=True)
+gan = train(Gan, 'gan', 20000, algos.gan.GanAlgo, use_saved_model=True)
+wgan = train(WGan, 'wgan', 20000, algos.wgan.WganAlgo, use_saved_model=True)

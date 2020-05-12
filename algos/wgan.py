@@ -2,6 +2,7 @@ import torch
 from torch.autograd import grad
 from visualize import scatter, map
 
+device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 λ = 10
 
 ############################
@@ -21,7 +22,7 @@ class WganAlgo:
 
             # gradient penalty
             out = gan.classify(interpolated_data)
-            grads = grad(out, interpolated_data, torch.ones(out.shape), create_graph=True)[0]
+            grads = grad(out, interpolated_data, torch.ones(out.shape).to(device), create_graph=True)[0]
             grad_penalty = λ * ((torch.norm(grads, dim=-1) - 1) ** 2)
 
             # improve classifier
