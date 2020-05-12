@@ -3,7 +3,7 @@ from torch.autograd import grad
 import numpy as np
 
 from data import sample_data
-from model import VariationalAutoEncoder, WGan
+from model import VariationalAutoEncoder, Gan, WGan
 from visualize import scatter, line, heatmap
 
 
@@ -39,7 +39,7 @@ def train(network_class, network_name, epochs, train_step, vis=None, use_saved_m
                 line(epoch, *stats)
             else:
                 for stat in stats: line(epoch, *stat)
-        if vis is not None and epoch % 100 == 99:
+        if vis is not None and epoch % 500 == 499:
             with torch.no_grad(): vis(net)
 
     # save final model
@@ -100,16 +100,40 @@ def auto_encoder_vis(auto_encoder):
 
     #! when making decision, maybe perturb point a bit to see what surrounding points are like
     def soft_border(threshold, x):
-        x_perturb = [x + torch.randn_like(x) for _ in range(10)]
+        x_perturb = [x + torch.randn_like(x) for _ in range(5)]
         all_x = [x] + x_perturb
         avg_ae_error = sum([torch.norm(auto_encoder(x) - x) for x in all_x]) / len(all_x)
         return 1 if avg_ae_error < threshold else 0
     map(lambda x: soft_border(threshold, x), 'Soft AE classification')
 
 
-#########################
-# AUTO-ENCODER TRAINING #
-#########################
+################
+# GAN TRAINING #
+################
+
+def gan_step(gan):
+    # necessary data
+    data = sample_data(batch_size, bad_data_prob)
+    generated_data = gan.generate(batch_size)
+
+    # improve classifier
+    obj = (torch.log(gan.classify(data)) + torch.log(1 - gan.classify(generated_data))).mean()
+    gan.maximize(gan.classifier_optimizer, obj)
+
+    # improve generator
+    loss = torch.log(1 - gan.classify(gan.generate(batch_size))).mean()
+    gan.minimize(gan.generator_optimizer, loss)
+
+    return [(obj.item(), 'Classifier Objective'), (loss.item(), 'Generator loss')]
+
+def gan_vis(gan):
+    scatter(gan.generate(500), win='Generated', name='GAN', color=[0,255,0])
+    map(gan.classify, 'GAN Classification')
+
+
+############################
+# WASSERSTEIN-GAN TRAINING #
+############################
 
 def wgan_step(gan):
     # necessary data
@@ -134,8 +158,8 @@ def wgan_step(gan):
     return [(obj.item(), 'Wasserstein objective'), (loss.item(), 'Generator loss')]
 
 def wgan_vis(gan):
-    scatter(gan.generate(500), win='Generated', name='GAN', color=[0,0,255])
-    map(gan.classify, 'GAN Classification')
+    scatter(gan.generate(500), win='Generated', name='WGAN', color=[0,0,255])
+    map(gan.classify, 'WGAN Classification')
 
 
 #################
@@ -146,5 +170,6 @@ def wgan_vis(gan):
 scatter(sample_data(500, bad_data_prob))
 
 # train AE and GAN
-# auto_encoder = train(VariationalAutoEncoder, 'auto_encoder', 2000, auto_encoder_step, auto_encoder_vis, use_saved_model=True)
-wgan = train(WGan, 'gan', 20000, wgan_step, wgan_vis, use_saved_model=False)
+auto_encoder = train(VariationalAutoEncoder, 'auto_encoder', 2000, auto_encoder_step, auto_encoder_vis, use_saved_model=True)
+gan = train(Gan, 'gan', 20000, gan_step, gan_vis, use_saved_model=False)
+wgan = train(WGan, 'wgan', 20000, wgan_step, wgan_vis, use_saved_model=False)
