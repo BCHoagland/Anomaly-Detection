@@ -13,10 +13,10 @@ def scatter(points, win='data', color=[0,0,0]):
             markersize=4,
             markerborderwidth=0,
             markercolor=np.array([color]),
-            xtickmin=-20,
-            xtickmax=20,
-            ytickmin=-20,
-            ytickmax=20
+            xtickmin=-30,
+            xtickmax=30,
+            ytickmin=-30,
+            ytickmax=30
         )
     )
 

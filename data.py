@@ -1,6 +1,7 @@
 import numpy as np
 import torch
-from torch.distributions import MultivariateNormal
+from torch.distributions import MultivariateNormal, Uniform
+from math import floor
 
 
 ##########################
@@ -20,19 +21,20 @@ def make_normal_dist(mean, std):
 #############
 # GOOD DATA #
 #############
-# μ = [[1, 6], [-5, -10]]
-# σ = [[2, 3], [4, 2]]
-μ = [[1, 6]]
-σ = [[2, 3]]
+μ = [[1, 6], [-5, -10]]
+σ = [[2, 3], [4, 2]]
+# μ = [[1, 6]]
+# σ = [[2, 3]]
 good_dists = [make_normal_dist(mean, std) for mean, std in zip(μ, σ)]
 
 
 ##################
 # ANOMALOUS DATA #
 ##################
-μ = [[15, 5]]
-σ = [[1, 2]]
-bad_dists = [make_normal_dist(mean, std) for mean, std in zip(μ, σ)]
+# μ = [[25, -10], [-10, 25], [0, -24]]
+# σ = [[1, 2], [3, 1], [2, 2]]
+# bad_dists = [make_normal_dist(mean, std) for mean, std in zip(μ, σ)]
+bad_dists = [Uniform(torch.tensor([-30.0, -30.0]), torch.tensor([30.0, 30.0]))]
 
 
 ######################
@@ -42,16 +44,14 @@ bad_dists = [make_normal_dist(mean, std) for mean, std in zip(μ, σ)]
 # sample from a given array of distributions
 def sample_from_dists(batch_size, dists):
     data = []
-    n = len(dists)
-    for dist in dists:
-        data.append(dist.sample(torch.Size([batch_size // n])))
-    data = torch.stack(data)
-    return data.view(-1, data.shape[2])
+    for _ in range(batch_size):
+        dist = np.random.choice(dists)
+        data.append(dist.sample())
+    return torch.stack(data)
 
 # sample from both distributions, with the given probability of choosing bad data
 def sample_data(batch_size, bad_data_prob):
-    data = sample_from_dists(batch_size, good_dists)
-    for i in range(len(data)):
-        if np.random.random() < bad_data_prob:
-            data[i] = sample_from_dists(1, bad_dists)
-    return data
+    bad_size = floor(batch_size * bad_data_prob)
+    good_data = sample_from_dists(batch_size-bad_size, good_dists)
+    bad_data = sample_from_dists(bad_size, bad_dists)
+    return torch.cat((good_data, bad_data), dim=0)
