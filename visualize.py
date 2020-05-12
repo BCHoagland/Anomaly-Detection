@@ -1,3 +1,4 @@
+import torch
 import numpy as np
 from visdom import Visdom
 
@@ -47,3 +48,14 @@ def heatmap(points, win, x_labels, y_labels):
             rownames=y_labels
         )
     )
+
+
+def map(fn, name):
+    x_range = torch.arange(-30, 30)
+    y_range = torch.arange(-30, 30)
+    arr = torch.zeros((len(x_range), len(y_range)))
+    for i in range(len(x_range)):
+        for j in range(len(y_range)):
+            x, y = x_range[i], y_range[j]
+            arr[i][j] = fn(torch.FloatTensor([x, y]))
+    heatmap(arr, name, x_range.tolist(), y_range.tolist())

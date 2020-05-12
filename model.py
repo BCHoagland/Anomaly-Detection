@@ -9,6 +9,41 @@ n_h = 128
 n_latent = 4
 ####################
 
+class AutoEncoder(nn.Module):
+    def __init__(self, lr):
+        super().__init__()
+
+        self.encode = nn.Sequential(
+            nn.Linear(n_in, n_h),
+            nn.Tanh(),
+            nn.Linear(n_h, n_h),
+            nn.Tanh(),
+            nn.Linear(n_h, n_latent)
+        )
+
+        self.decode = nn.Sequential(
+            nn.Linear(n_latent, n_h),
+            nn.Tanh(),
+            nn.Linear(n_h, n_h),
+            nn.Tanh(),
+            nn.Linear(n_h, n_in)
+        )
+
+        self.optimizer = optim.Adam(self.parameters(), lr=lr)
+    
+    def generate(self, batch_size):
+        noise = randn(batch_size, n_latent)
+        return self.decode(noise)
+    
+    def forward(self, x):
+        return self.decode(self.encode(x))
+    
+    def minimize(self, loss):
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
+
+
 class VariationalAutoEncoder(nn.Module):
     def __init__(self, lr):
         super().__init__()

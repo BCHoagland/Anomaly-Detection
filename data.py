@@ -4,6 +4,8 @@ from torch.distributions import MultivariateNormal, Uniform
 from math import floor
 
 
+bad_data_prob = 0.01
+
 ##########################
 # DISTRIBUTION FUNCTIONS #
 ##########################
@@ -50,7 +52,7 @@ def sample_from_dists(batch_size, dists):
     return torch.stack(data)
 
 # sample from both distributions, with the given probability of choosing bad data
-def sample_data(batch_size, bad_data_prob):
+def sample_data(batch_size):
     bad_size = floor(batch_size * bad_data_prob)
     good_data = sample_from_dists(batch_size-bad_size, good_dists)
     bad_data = sample_from_dists(bad_size, bad_dists)
