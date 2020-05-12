@@ -1,12 +1,13 @@
 import torch
+import numpy as np
 
 from data import sample_data
-from model import AutoEncoder, Classifier, Generator
+from model import VariationalAutoEncoder, Classifier
 from visualize import scatter, line, heatmap
 
 
 # hyperparameters
-bad_data_prob = 0.02
+bad_data_prob = 0.01
 batch_size = 128
 lr = 3e-4
 
@@ -25,7 +26,7 @@ def train(network_class, network_name, epochs, train_step, vis=None, use_saved_m
         # if not, train a new one and save it
         except FileNotFoundError:
             pass
-    
+
     # training loop
     for epoch in range(epochs):
         # Take an optimization step and visualize if necessary
@@ -41,8 +42,8 @@ def train(network_class, network_name, epochs, train_step, vis=None, use_saved_m
 
 def map(fn, name):
     with torch.no_grad():
-        x_range = torch.arange(-20, 20)
-        y_range = torch.arange(-20, 20)
+        x_range = torch.arange(-30, 30)
+        y_range = torch.arange(-30, 30)
         arr = torch.zeros((len(x_range), len(y_range)))
         for i in range(len(x_range)):
             for j in range(len(y_range)):
@@ -57,53 +58,19 @@ def map(fn, name):
 
 def auto_encoder_step(auto_encoder):
     inp = sample_data(batch_size, bad_data_prob)
-    out = auto_encoder(inp)
+    out, mean, std = auto_encoder.forward_with_dist(inp)
 
-    # minimizing step on MSE loss
-    loss = ((out - inp) ** 2).mean()
+    # minimize regularized MSE
+    mse = ((out - inp) ** 2).mean()
+    kl = 0.5 * (mean**2 + std**2 - torch.log(std**2) - 1).sum(dim=1).mean()
+    loss = mse + kl
     auto_encoder.minimize(loss)
 
     # plot loss
     line(loss.item(), 'AE loss')
 
-
-######################
-# GENERATOR TRAINING #
-######################
-
-def generator_step(auto_encoder, generator):
-    data = sample_data(batch_size, bad_data_prob)
-
-    # improve generator
-    loss = ((data - generator(batch_size))**2).mean()
-    generator.minimize(loss)
-
-    # plot objective
-    line(loss.item(), 'Generator Loss')
-
-
-def generator_vis(auto_encoder, generator):
-    with torch.no_grad(): scatter(auto_encoder.decode(generator(500)), 'Generated', color=[255,0,0])
-
-
-#######################
-# CLASSIFIER TRAINING #
-#######################
-
-def classifier_step(auto_encoder, classifier):
-    # sample data and use AE to encode it
-    data = auto_encoder.encode(sample_data(batch_size, bad_data_prob))
-
-    # improve classifier
-    obj = torch.log(classifier(data)).mean()
-    classifier.maximize(obj)
-
-    # plot objective
-    line(obj.item(), 'Classifier Objective')
-
-
-def classifier_vis(auto_encoder, classifier):
-    map(lambda x: classifier(auto_encoder.encode(x)), 'Classification Probabilities')
+def auto_encoder_vis(auto_encoder):
+    scatter(auto_encoder.generate(500), 'Generated', color=[255,0,0])
 
 
 #################
@@ -114,10 +81,32 @@ def classifier_vis(auto_encoder, classifier):
 scatter(sample_data(500, bad_data_prob))
 
 # train AE and classifier
-auto_encoder = train(AutoEncoder, 'auto_encoder', 1000, auto_encoder_step)
-generator = train(Generator, 'generator', 1000, lambda x: generator_step(auto_encoder, x), lambda x: generator_vis(auto_encoder, x), use_saved_model=False)
-classifier = train(Classifier, 'classifier', 1000, lambda x: classifier_step(auto_encoder, x), lambda x: classifier_vis(auto_encoder, x))
+auto_encoder = train(VariationalAutoEncoder, 'auto_encoder', 2000, auto_encoder_step, auto_encoder_vis, use_saved_model=True)
 
 # testing
-map(lambda x: torch.norm(auto_encoder(x) - x, 2), 'AE Error')
-map(lambda x: classifier(auto_encoder.encode(x)), 'Classification Probabilities')
+map(lambda x: torch.norm(auto_encoder(x) - x), 'AE Error')
+
+# determine AE error on generated data
+with torch.no_grad():
+    generated_data = auto_encoder.generate(1000)
+    errors = torch.norm(auto_encoder(generated_data) - generated_data, dim=1)
+
+    threshold = np.percentile(errors, 99.9)
+    print(threshold)
+
+# plot AE-error method's decision boundary
+def border(threshold, x):
+    ae_error = torch.norm(auto_encoder(x) - x)
+    return 1 if ae_error < threshold else 0
+map(lambda x: border(threshold, x), 'AE classification')
+
+
+
+#! when making decision, maybe perturb point a bit to see what surrounding points are like
+def border(threshold, x):
+    x_perturb = [x + torch.randn_like(x) for _ in range(10)]
+    all_x = [x] + x_perturb
+    avg_ae_error = sum([torch.norm(auto_encoder(x) - x) for x in all_x]) / len(all_x)
+    # ae_error = torch.norm(auto_encoder(x) - x)
+    return 1 if avg_ae_error < threshold else 0
+map(lambda x: border(threshold, x), 'Soft AE classification')
