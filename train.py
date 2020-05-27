@@ -57,7 +57,7 @@ def train(network_class, network_name, epochs, algo, use_saved_model=True):
 scatter(sample_data(500))
 
 # train AE and GAN
-ae = train(AutoEncoder, 'ae', 20000, algos.ae.AeAlgo, use_saved_model=True)
+# ae = train(AutoEncoder, 'ae', 20000, algos.ae.AeAlgo, use_saved_model=True)
 vae = train(VariationalAutoEncoder, 'vae', 20000, algos.vae.VaeAlgo, use_saved_model=True)
-gan = train(Gan, 'gan', 20000, algos.gan.GanAlgo, use_saved_model=True)
-wgan = train(WGan, 'wgan', 20000, algos.wgan.WganAlgo, use_saved_model=True)
+# gan = train(Gan, 'gan', 20000, algos.gan.GanAlgo, use_saved_model=True)
+# wgan = train(WGan, 'wgan', 20000, algos.wgan.WganAlgo, use_saved_model=True)
